@@ -45,5 +45,11 @@ __The Admin API__ of Gorouter(usually on 8081), which is protected by some __bas
 
 __Scalablility__ is one of the features of the Gorouter, as you could run multiple Gorouter instances behind the an Nginx proxy, allowing it load balance between the configured Gorouters. This capability is enabled by running _Gnatsd_ on a independepent instance, providing each Gorouter to pick the routes from _Gnatsd_ queue. Though this article will not detail the scalable setup, it is pretty obvious.
 
-### Setup
+### Play it!!!
+
+Now having understood the theoretical premise of what and how we are to achieve a centralized netdata, it worth taking that to a ride. The resources(self contained binaries) for the setup are availalble [here](https://github.com/samof76/writtings/tree/master/metric_hill_netdata_part1) at the `resources` directory. Now for the setup, we would require [`gorouter`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gorouter?raw=true), [`gnatsd`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gnatsd?raw=true) and [`nats-pub`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/nats-pub?raw=true), from that directory.
+
+#### Supervised setup
+
+Always using process manager to manage long running process is an ideal mechanism. For this setup we would be using [supervisord](http://supervisord.org), to manage both Gorouter and Gnatsd, both running on the same machine. So lets first download these resources on the machine
 
