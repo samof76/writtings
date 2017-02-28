@@ -71,11 +71,11 @@ Though netdata can be setup behind a proxy like, [Nginx](https://github.com/fire
 
 A jist of how Gorouter works. Gorouter works along with [GNatsd](https://nats.io), subscribed to messages on the Nats for nodes publishing their signature(in this case `w1.netdata.monitor.zapped.pigs`, where `w1` is a hostname) and their ip address, and port(netdata port). As you can see in the following diagram.
 
-![gorouter_nats_nodes]()
+![gorouter_nats_nodes](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gorouter_nats_nodes.png)
 
 Gorouter sits behind a proxy like Nginx which serves say, *.netdata.monitor.zapped.pigs data, and any `w1.netdata.monitor.zapped.pigs` is sent to it(Gorouter) by the Nginx proxy. Once the Gorouter picks this message it updates its registry with the new node details its URI(`w1.netdata.monitor.zapped.pigs`). So now when Gorouter receives the `w1.netdata.monitor.zapped.pigs` through the Nginx proxy, it just routes the traffic to `w1` node's netdata port, which it picks from its registry. As you can see in the following diagram.
 
-
+![nginx_gorouter_nodes](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/nginx_gorouter_nodes.png)
 
 The design of Gorouter makes it most suited for Dynamic environments where service nodes come up and go. So every node requires to ping its status to the Gorouter publishing its availability, otherwise the Gorouter will remove the node details from its registry, after a defined TTL(usually 2 minutes).
  
