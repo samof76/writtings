@@ -47,9 +47,23 @@ __Scalablility__ is one of the features of the Gorouter, as you could run multip
 
 ### Play it!!!
 
-Now having understood the theoretical premise of what and how we are to achieve a centralized netdata, it worth taking that to a ride. The resources(self contained binaries) for the setup are availalble [here](https://github.com/samof76/writtings/tree/master/metric_hill_netdata_part1) at the `resources` directory. Now for the setup, we would require [`gorouter`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gorouter?raw=true), [`gnatsd`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gnatsd?raw=true) and [`nats-pub`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/nats-pub?raw=true), from that directory.
+Now having understood the theoretical premise of what and how we are to achieve a centralized netdata, it worth taking that to a ride. The resources(self contained binaries) for the setup are availalble [here](https://github.com/samof76/writtings/tree/master/metric_hill_netdata_part1) at the `resources` directory. Now for the setup, we would require [`gorouter`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gorouter?raw=true), [`gnatsd`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gnatsd?raw=true) and [`nats-pub`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/nats-pub?raw=true), from that directory. This setup exercise is completely manual to understand the nuances. And all commands here are run on a Ubuntu 16.04 server.
 
 #### Supervised setup
 
-Always using process manager to manage long running process is an ideal mechanism. For this setup we would be using [supervisord](http://supervisord.org), to manage both Gorouter and Gnatsd, both running on the same machine. So lets first download these resources on the machine
+Always using process manager to manage long running process is an ideal mechanism. For this setup we would be using [supervisord](http://supervisord.org), to manage both Gorouter and Gnatsd,same machine. So lets first download these resources on to the machine which would run Gorouter.
+
+    $ # Download Gorouter
+    $ sudo wget -O /usr/bin/gorouter https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gorouter?raw=true
+    $ sudo chmod +x /usr/bin/gorouter
+    $ # Download Gnatsd
+    $ sudo wget -O /usr/bin/gnatsd https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gorouter?raw=true
+    $ sudo chmod +x /usr/bin/gnatsd
+
+
+Now we have Gorouter and Gnatsd in place on our machine, so off to setting up supervisord. Supervisord is program that manage multiple coworking or disparate long running processes, that you would like to put into the background. Supervisord also provide control center(CLI-based, `supervisorctl`), that allows you to manage the processes. Supervisord installation is simple.
+
+    $ sudo apt-get install python-pip python-setuptools
+    $ sudo pip install supervisor
+
 
