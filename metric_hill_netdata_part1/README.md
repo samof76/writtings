@@ -49,7 +49,7 @@ __Scalablility__ is one of the features of the Gorouter, as you could run multip
 
 Now having understood the theoretical premise of what and how we are to achieve a centralized netdata, it worth taking that to a ride. The resources(self contained binaries) for the setup are availalble [here](https://github.com/samof76/writtings/tree/master/metric_hill_netdata_part1) at the `resources` directory. Now for the setup, we would require [`gorouter`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gorouter?raw=true), [`gnatsd`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/gnatsd?raw=true) and [`nats-pub`](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/nats-pub?raw=true), from that directory. This setup exercise is completely manual to understand the nuances. And all commands here are run on a Ubuntu 16.04 server.
 
-#### Supervised setup
+#### Supervised Gorouter
 
 Always using process manager to manage long running process is an ideal mechanism. For this setup we would be using [supervisord](http://supervisord.org), to manage both Gorouter and Gnatsd,same machine. So lets first download these resources on to the machine which would run Gorouter.
 
@@ -66,4 +66,139 @@ Now we have Gorouter and Gnatsd in place on our machine, so off to setting up su
     $ sudo apt-get install python-pip python-setuptools
     $ sudo pip install supervisor
 
+To make supervisor aware of running both Gorouter and Gnatsd, we have to create `supervisord.conf` file, and place it in /etc, which one of the location where supervisord will pick up the configuration from. Our `supervisord.conf` looks like the following.
 
+    [unix_http_server]
+    file=/var/run/supervisor.sock
+
+    [supervisord]
+    logfile=/var/log/supervisord
+    logfile_maxbytes=50MB
+    logfile_backups=10
+    loglevel=info
+    pidfile=/var/run/supervisord.pid
+    nodaemon=false
+    minfds=1024
+    minprocs=200
+
+    [supervisorctl]
+    serverurl=unix:///var/run/supervisor.sock ; use a unix:// URL  for a unix socket
+
+    [rpcinterface:supervisor]
+    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+    [program:gnatsd]
+    command=/usr/bin/gnatsd
+    priority=400
+    stdout_logfile=/var/log/gorouter/access.log
+    stdout_logfile_maxbytes=10MB
+    stdout_logfile_backups=10
+    stderr_logfile=/var/log/gorouter/error.log
+    stderr_logfile_maxbytes=10MB
+    stderr_logfile_backups=10
+
+    [program:gorouter]
+    command=/usr/bin/gorouter -c /etc/gorouter.yml
+    priority=500
+    stdout_logfile=/var/log/gnatsd/access.log
+    stdout_logfile_maxbytes=10MB
+    stdout_logfile_backups=10
+    stderr_logfile=/var/log/gnatsd/error.log
+    stderr_logfile_maxbytes=10MB
+    stderr_logfile_backups=10
+
+Notice `/etc/gorouter.yml`, this is just a basic Gorouter configuration file, that looks like this.
+
+    status:
+        port: 8082
+        user: admin
+        pass: 5tr0ngp@55w0rd
+
+    nats:
+        - host: "localhost"
+          port: 4222
+          user:
+          pass:
+
+
+    port: 8081
+    index: 0
+
+    go_max_procs: 5
+
+The Gorouter configuration, is actually not needed, yet needs to created if you have specified `-c` option on your `/etc/supervisord.conf` file. Also note the `priority` in the supervisord configuration, this actually ensures that `gorouter` is launched after `gnatsd`.
+
+Now we can start the supervisord daemon.
+
+    $ sudo supervisord -c /etc/supervisord.conf
+
+This will start both `gnatsd` and `gorouter`, ensure they are start but making curl to the Gorouter's admin API.
+
+    $ curl http://admin:5tr0ngp@55w0rd@localhost:8082/healthz
+
+This should return __`ok`__. That means that you are all set to register your netdata URI. But one pit stop to setup Nginx proxy.
+
+### Proxy thru Nginx
+
+Remember our second diagram, we have to route `*.netdata.monitor.zapped.pigs` to `gorouter`. This is where that happens. Setup Nginx on your machine, I would do that on the same server thats running `gnatsd` and `gorouter`, but you are free to run it on a different server. Here is the configuration,
+
+
+    upstream gorouter {
+        # the netdata server
+        server 127.0.0.1:8081;
+        keepalive 64;
+    }
+
+    server {
+        # nginx listens to this
+        listen 80;
+
+        # the virtual host name of this
+        server_name *.netdata.monitor.zapped.pigs;
+
+        location / {
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-Server $host;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_pass http://gorouter;
+            proxy_http_version 1.1;
+            proxy_pass_request_headers on;
+            proxy_set_header Connection "keep-alive";
+            proxy_store off;
+        }
+    }
+
+We take that and create `/etc/nginx/sites-available/star_netdata_monitor_zapped_pigs`, and then symlink to it with `/etc/nginx/sites-enabled/star_netdata_monitor_zapped_pigs`. Then we restart the `nginx` service. All we've left to do is point our domain `*.netdata.monitor.zapped.pigs` to our server on the DNS. One more thing we could do is point `admin.netdata.monitor.zapped.pigs`, to admin API of the Gorouter, that running on the server's `localhost:8082`. So we create `/etc/nginx/sites-available/admin_netdata_monitor_zapped_pigs`, and symlink to it with `/etc/nginx/sites-enabled/admin_netdata_monitor_zapped_pigs`. Here is its configuration.
+
+    upstream gorouter-admin {
+        # the netdata server
+        server 127.0.0.1:8082;
+        keepalive 64;
+    }
+
+    server {
+        # nginx listens to this
+        listen 80;
+
+        # the virtual host name of this
+        server_name admin.netdata.monitor.zapped.pigs;
+
+        location / {
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-Server $host;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_pass http://gorouter-admin;
+            proxy_http_version 1.1;
+            proxy_pass_request_headers on;
+            proxy_set_header Connection "keep-alive";
+            proxy_store off;
+        }
+    }
+
+Now we restart the `nginx` service again. We should able be to login from the browser into http://admin.netdata.monitor.zapped.pigs/healthz, using the `username-password` combination as provided in the `gorouter`'s `yml`.
+
+### Time to Monitor
+
+This is where we select a server to setup Netdata and register that server with, gorouter. 
