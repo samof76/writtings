@@ -242,13 +242,17 @@ Let us register our newly installed service(running on port `19999`) with the go
 
 Then we setup the `nats-pub`'s publish cron like the following.
 
-    * * * * *   /usr/local/bin/nats-pub -s 172.16.30.23 'router.register' '{\"host\":\"172.16.30.20\",\"port\":19999,\"uris\":[\"w1.netdata.monitor.zapped.pigs\"],\"tags\":{\"name\":\"w1\",\"type\":\"webserver\"}}'"
+    * * * * *   /usr/local/bin/nats-pub -s 172.16.30.23 'router.register' '{\"host\":\"172.16.30.20\",\"port\":19999,\"uris\":[\"w1.netdata.monitor.zapped.pigs\"],\"tags\":{\"name\":\"w1\",\"type\":\"webserver\"}}'
 
 The above command, would publish the node's ip(`172.16.30.20`), the netdata port(`19999`), and the addressable uri `w1.netdata.monitor.zapped.pigs` on the `gnatsd` service(`172.16.30.23`), every minute, this is picked up the `gorouter`.
 
 ### Done!!!
 
-Now we are done; we should be able to address the netdata dashboard for our `w1` node at http://w1.netdata.monitor.zapped.pigs. And we would be able to have a look at all the netdata addressable URIs at http://admin.netdata.monitor.zapped.pigs/routes. This way we have kind of a centrally addressable location for all our nodes monitored by netdata, and also through this mechanism we could dynamically add routes(or nodes).
+Now we are done; we should be able to address the netdata dashboard for our `w1` node at http://w1.netdata.monitor.zapped.pigs.
+
+![w1_dashboard](https://github.com/samof76/writtings/blob/master/metric_hill_netdata_part1/resources/w1_dashboard.png)
+
+ And we would be able to have a look at all the netdata addressable URIs at http://admin.netdata.monitor.zapped.pigs/routes. This way we have kind of a centrally addressable location for all our nodes monitored by netdata, and also through this mechanism we could dynamically add routes(or nodes).
 
 ### Next Up???
 
